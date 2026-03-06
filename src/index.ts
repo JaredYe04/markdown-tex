@@ -1,5 +1,5 @@
 /**
- * Texdown: Markdown ⇄ LaTeX conversion library.
+ * Mdtex: Markdown ⇄ LaTeX conversion library.
  * Uses AST as intermediate representation; round-trip safe for supported subset.
  */
 
