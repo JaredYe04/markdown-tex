@@ -1,9 +1,27 @@
 # 打包与发布 / Build & Publish
 
+## 关于 403 Forbidden（为什么 NPM_TOKEN 没问题却报错？）
+
+工作流和你们另一个项目一样：**都是直接用仓库里的 NPM_TOKEN 发布**，没有多任何逻辑。
+
+403 的原因是：**包名在 npm 上已被别人占用**。  
+npm 会先验证你的 token（通过），再检查「谁有权发布到这个名字」：只有该包名的**当前拥有者**可以发布，所以会返回 403，和 NPM_TOKEN 是否正确无关。
+
+**解决办法（二选一）：**
+
+1. **换一个未被占用的包名**（推荐）  
+   例如在 `package.json` 里把 `"name"` 改成未被占用的名字（如 `mdtex`、`texdown-converter` 等，先在 [npmjs.com](https://www.npmjs.com) 搜一下是否已被占用）。  
+   **工作流不用改**，继续用同一个 NPM_TOKEN 即可；MetaDoc 里依赖和 import 改成新包名即可。
+
+2. **继续用原包名**  
+   需要联系当前占用该包名的用户，请求 transfer 给你，或由 npm 支持处理（一般较慢）。
+
+---
+
 ## 本地打包
 
 ```bash
-cd d:\repos\texdown
+cd /path/to/mdtex
 npm ci
 npm run build
 npm test
@@ -34,7 +52,7 @@ npm publish --access public
 git push origin main --tags
 ```
 
-需在本地先 `npm login`，且确保 package 名 `texdown` 在 npm 上可用（未占则首次发布即创建）。
+需在本地先 `npm login`，且确保 package 名 `mdtex` 在 npm 上可用（未占则首次发布即创建）。
 
 ---
 
@@ -44,11 +62,10 @@ git push origin main --tags
 
 ```bash
 cd /path/to/meta-doc
-npm install texdown@^1.0.0
-# 或保持 package.json 中 "texdown": "^1.0.0" 后执行
+npm install mdtex@^1.0.0
+# 或保持 package.json 中 "mdtex": "^1.0.0" 后执行
 npm install
 ```
 
-- **代码无需改动**：MetaDoc 已从 `'texdown'` 包 import（`markdownToLatex`、`latexToMarkdown`、`escapeLatex`），只要依赖里是 `texdown` 的 npm 版本即可。
-- 若在发布前需要在 MetaDoc 里联调本地 texdown，可在 meta-doc 的 `package.json` 中临时改为：
-  `"texdown": "file:../../../repos/texdown"`（路径按你本机 MetaDoc 与 texdown 的相对位置调整），发布后再改回 `"texdown": "^x.x.x"`。
+- **代码**：MetaDoc 从 `'mdtex'` 包 import（`markdownToLatex`、`latexToMarkdown`、`escapeLatex`）。
+- 联调本地 mdtex 时，可临时使用 `"mdtex": "file:../../../repos/mdtex"`（路径按你本机 MetaDoc 与 mdtex 仓库的相对位置调整），发布后改回 `"mdtex": "^x.x.x"`。

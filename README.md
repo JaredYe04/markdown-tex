@@ -6,19 +6,19 @@
 <details id="en" open>
 <summary><strong>🇺🇸 English</strong></summary>
 
-# 📄 texdown
+# 📄 mdtex
 
 > **Markdown ⇄ LaTeX** conversion library with a unified AST. Round-trip safe for headings, paragraphs, lists, code blocks, math, links, images, tables, blockquotes, and inline formatting.
 
-[![npm](https://img.shields.io/npm/v/@jaredye04/texdown)](https://www.npmjs.com/package/@jaredye04/texdown)
-[![GitHub](https://img.shields.io/badge/GitHub-JaredYe04%2Ftexdown-blue)](https://github.com/JaredYe04/texdown)
+[![npm](https://img.shields.io/npm/v/mdtex)](https://www.npmjs.com/package/mdtex)
+[![GitHub](https://img.shields.io/badge/GitHub-JaredYe04%2Fmdtex-blue)](https://github.com/JaredYe04/mdtex)
 
 ---
 
 ## 🚀 Install
 
 ```bash
-npm install @jaredye04/texdown
+npm install mdtex
 ```
 
 ---
@@ -52,7 +52,7 @@ npm install @jaredye04/texdown
 ### Basic conversion
 
 ```ts
-import { markdownToLatex, latexToMarkdown } from '@jaredye04/texdown'
+import { markdownToLatex, latexToMarkdown } from 'mdtex'
 
 // Markdown → LaTeX body
 const latex = markdownToLatex('# Hello **world**\n\n- item one\n- item two')
@@ -81,7 +81,7 @@ const code = markdownToLatex('```js\nconst x = 1\n```')
 ### Escape for titlepage / headers
 
 ```ts
-import { escapeLatex } from '@jaredye04/texdown'
+import { escapeLatex } from 'mdtex'
 
 const title = escapeLatex('Price: 100% & "quoted"')
 // → Price: 100\% \& \"quoted\"
@@ -92,27 +92,27 @@ const title = escapeLatex('Price: 100% & "quoted"')
 
 ## 🔗 Links
 
-- **Repository:** [github.com/JaredYe04/texdown](https://github.com/JaredYe04/texdown)
-- **npm:** [@jaredye04/texdown](https://www.npmjs.com/package/@jaredye04/texdown)
+- **Repository:** [github.com/JaredYe04/mdtex](https://github.com/JaredYe04/mdtex)
+- **npm:** [mdtex](https://www.npmjs.com/package/mdtex)
 
 </details>
 
 <details id="zh">
 <summary><strong>🇨🇳 中文</strong></summary>
 
-# 📄 texdown
+# 📄 mdtex
 
 > 基于**统一 AST** 的 **Markdown ⇄ LaTeX** 转换库。支持标题、段落、列表、代码块、数学、链接、图片、表格、引用及行内格式的往返转换。
 
-[![npm](https://img.shields.io/npm/v/@jaredye04/texdown)](https://www.npmjs.com/package/@jaredye04/texdown)
-[![GitHub](https://img.shields.io/badge/GitHub-JaredYe04%2Ftexdown-blue)](https://github.com/JaredYe04/texdown)
+[![npm](https://img.shields.io/npm/v/mdtex)](https://www.npmjs.com/package/mdtex)
+[![GitHub](https://img.shields.io/badge/GitHub-JaredYe04%2Fmdtex-blue)](https://github.com/JaredYe04/mdtex)
 
 ---
 
 ## 🚀 安装
 
 ```bash
-npm install @jaredye04/texdown
+npm install mdtex
 ```
 
 ---
@@ -146,7 +146,7 @@ npm install @jaredye04/texdown
 ### 基础转换
 
 ```ts
-import { markdownToLatex, latexToMarkdown } from '@jaredye04/texdown'
+import { markdownToLatex, latexToMarkdown } from 'mdtex'
 
 // Markdown → LaTeX 正文
 const latex = markdownToLatex('# 你好 **世界**\n\n- 第一项\n- 第二项')
@@ -175,7 +175,7 @@ const code = markdownToLatex('```js\nconst x = 1\n```')
 ### 标题页/页眉转义
 
 ```ts
-import { escapeLatex } from '@jaredye04/texdown'
+import { escapeLatex } from 'mdtex'
 
 const title = escapeLatex('价格：100% & “引号”')
 // → 价格：100\% \& \"引号\"
@@ -186,7 +186,7 @@ const title = escapeLatex('价格：100% & “引号”')
 
 ## 🔗 链接
 
-- **仓库：** [github.com/JaredYe04/texdown](https://github.com/JaredYe04/texdown)
-- **npm：** [@jaredye04/texdown](https://www.npmjs.com/package/@jaredye04/texdown)
+- **仓库：** [github.com/JaredYe04/mdtex](https://github.com/JaredYe04/mdtex)
+- **npm：** [mdtex](https://www.npmjs.com/package/mdtex)
 
 </details>
