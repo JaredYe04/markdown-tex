@@ -1,6 +1,6 @@
 {
   "name": "texdown",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Markdown ⇄ LaTeX conversion library with unified AST",
   "author": "JaredYe04",
   "repository": {
@@ -12,8 +12,7 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "README.md",
-    "README.zh-CN.md"
+    "README.md"
   ],
   "scripts": {
     "build": "tsc",
