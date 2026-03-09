@@ -45,6 +45,10 @@ describe('LaTeX → Markdown', () => {
     expect(latexToMarkdown('\\texttt{\\textbackslash}')).toBe('`\\`')
   })
 
+  it('\\texttt{\\textbackslash{}} → `\\` (backslash in code, brace form)', () => {
+    expect(latexToMarkdown('\\texttt{\\textbackslash{}}')).toBe('`\\`')
+  })
+
   it('\\textbackslash alone → \\ (plain backslash)', () => {
     expect(latexToMarkdown('\\textbackslash')).toBe('\\')
   })

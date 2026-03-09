@@ -50,8 +50,8 @@ export function escapeLatex(str: string): string {
 function escapeLatexForTexttt(str: string): string {
   if (!str) return ''
   let result = String(str)
-  result = result.replace(/\\/g, '\\textbackslash')
   result = result.replace(/([{}])/g, '\\$1')
+  result = result.replace(/\\/g, '\\textbackslash{}')
   result = result.replace(/#/g, '\\#')
   result = result.replace(/\$/g, '\\$')
   result = result.replace(/&/g, '\\&')

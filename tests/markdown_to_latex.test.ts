@@ -126,6 +126,38 @@ describe('Markdown → LaTeX', () => {
     expect(out).toContain('\\_')
   })
 
+  it('inline code with backslash: `\\section` → \\texttt{\\textbackslash{}section} (avoids undefined control sequence)', () => {
+    expect(markdownToLatex('`\\section`')).toBe('\\texttt{\\textbackslash{}section}')
+    expect(markdownToLatex('`\\textbf`')).toBe('\\texttt{\\textbackslash{}textbf}')
+  })
+
+  it('LaTeX feature list: backslash commands in inline code use \\textbackslash{} so LaTeX compiles', () => {
+    const md = `**LaTeX**
+
+* \`\\section\`
+* \`\\textbf\`
+* \`\\textit\`
+* \`itemize\`
+* \`enumerate\`
+* \`verbatim\`
+* \`\\href\`
+* \`\\includegraphics\`
+* \`\\[\` \`\\]\` 数学环境`
+    const latex = markdownToLatex(md)
+    // Backslash in \\texttt must be \\textbackslash{} so \\textbackslash + letter is not read as one macro
+    expect(latex).toContain('\\textbackslash{}section')
+    expect(latex).toContain('\\textbackslash{}textbf')
+    expect(latex).toContain('\\textbackslash{}textit')
+    expect(latex).toContain('\\textbackslash{}href')
+    expect(latex).toContain('\\textbackslash{}includegraphics')
+    expect(latex).toContain('\\textbackslash{}[')
+    expect(latex).toContain('\\textbackslash{}]')
+    // Plain words without backslash stay as-is in \\texttt
+    expect(latex).toContain('\\texttt{itemize}')
+    expect(latex).toContain('\\texttt{enumerate}')
+    expect(latex).toContain('\\texttt{verbatim}')
+  })
+
   it('performance: 5000+ lines under 200ms', () => {
     const lines = Array.from({ length: 5000 }, (_, i) => `# Heading ${i}\n\nParagraph with **bold** and *italic*.\n`)
     const md = lines.join('\n')

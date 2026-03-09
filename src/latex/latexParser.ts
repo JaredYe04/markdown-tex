@@ -866,10 +866,11 @@ function parseInlineLatex(line: string): InlineNode[] {
   let i = 0
 
   while (i < line.length) {
-    // \textbackslash → single backslash character (for \ in output)
+    // \textbackslash or \textbackslash{} → single backslash character (for \ in output)
     if (line.slice(i).startsWith('\\textbackslash')) {
       out.push({ type: 'text', value: '\\' })
       i += '\\textbackslash'.length
+      if (line.slice(i).startsWith('{}')) i += 2
       continue
     }
 
