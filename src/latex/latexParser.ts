@@ -64,6 +64,8 @@ function stripControlBlocks(body: string): string {
   // \vspace{...}, \vfill, \centering (standalone)
   s = s.replace(/\\vspace\{[^{}]*\}/g, '')
   s = s.replace(/\\vfill\b/g, '')
+  // \noindent\rule{...}
+  s = s.replace(/\\noindent\s*\\rule\{[^{}]*\}\{[^{}]*\}/g, '')
   return s
 }
 
@@ -83,7 +85,47 @@ export function sanitizeLatexBody(latex: string): string {
   }
   const stripped = stripControlBlocks(body)
   const noComments = stripLineComments(stripped)
-  return noComments.replace(/\n{3,}/g, '\n\n').trim()
+  const collapsedMath = collapseNewlinesInsideMath(noComments)
+  return collapsedMath.replace(/\n{3,}/g, '\n\n').trim()
+}
+
+/** Collapse newlines inside $...$ and $$...$$ so multi-line math is parsed as one unit. */
+function collapseNewlinesInsideMath(s: string): string {
+  let out = ''
+  let i = 0
+  while (i < s.length) {
+    if (s.slice(i).startsWith('$$')) {
+      out += '$$'
+      i += 2
+      const end = s.indexOf('$$', i)
+      if (end !== -1) {
+        out += s.slice(i, end).replace(/\n+/g, ' ').trim()
+        out += '$$'
+        i = end + 2
+      } else {
+        out += s.slice(i).replace(/\n+/g, ' ')
+        i = s.length
+      }
+      continue
+    }
+    if (s[i] === '$' && i + 1 < s.length && s[i + 1] !== '$') {
+      out += '$'
+      i += 1
+      const end = s.indexOf('$', i)
+      if (end !== -1) {
+        out += s.slice(i, end).replace(/\n+/g, ' ').trim()
+        out += '$'
+        i = end + 1
+      } else {
+        out += s.slice(i).replace(/\n+/g, ' ')
+        i = s.length
+      }
+      continue
+    }
+    out += s[i]
+    i++
+  }
+  return out
 }
 
 export function parseLatex(latex: string): AST {
@@ -329,6 +371,25 @@ function parseBlocks(source: string): BlockNode[] {
       continue
     }
 
+    // \begin{appendices}...\end{appendices} → heading + inner body
+    if (trimmed.startsWith('\\begin{appendices}')) {
+      const innerResult = parseGenericEnv(lines, i, 'appendices')
+      blocks.push({ type: 'heading', level: 2, children: [{ type: 'text', value: 'Appendices' }] })
+      blocks.push(...parseBlocks(innerResult.inner))
+      i = innerResult.nextIndex
+      continue
+    }
+
+    // \begin{table}...\end{table} → extract tabular and emit TableNode
+    if (trimmed.match(/^\\begin\{table\}/)) {
+      const tableResult = parseTableEnv(lines, i)
+      if (tableResult) {
+        blocks.push(tableResult.node)
+        i = tableResult.nextIndex
+        continue
+      }
+    }
+
     // Unknown \begin{xxx} ... \end{xxx}: fallback as raw block (e.g. figure, table, tikz)
     const beginUnknownMatch = trimmed.match(/^\\begin\{([a-zA-Z*]+)\}/)
     if (beginUnknownMatch) {
@@ -349,6 +410,50 @@ function parseBlocks(source: string): BlockNode[] {
     // \hrulefill
     if (trimmed === '\\hrulefill') {
       blocks.push({ type: 'thematic_break' })
+      i++
+      continue
+    }
+
+    // \title{...} → level-1 heading
+    const titleMatch = trimmed.match(/^\\title\s*\{/)
+    if (titleMatch) {
+      const braced = extractBraced(trimmed, trimmed.indexOf('{'))
+      if (braced) {
+        const children = parseInlineLatex(braced.content)
+        blocks.push({ type: 'heading', level: 1, children })
+      } else {
+        blocks.push({ type: 'unknown', raw: line })
+      }
+      i++
+      continue
+    }
+
+    // \author{...} → paragraph
+    const authorMatch = trimmed.match(/^\\author\s*\{/)
+    if (authorMatch) {
+      const braced = extractBraced(trimmed, trimmed.indexOf('{'))
+      if (braced) {
+        const children = parseInlineLatex(braced.content)
+        blocks.push({ type: 'paragraph', children })
+      } else {
+        blocks.push({ type: 'unknown', raw: line })
+      }
+      i++
+      continue
+    }
+
+    // \date{...} or \date{\today} → paragraph
+    const dateMatch = trimmed.match(/^\\date\s*\{/)
+    if (dateMatch) {
+      const braced = extractBraced(trimmed, trimmed.indexOf('{'))
+      if (braced) {
+        const inner = braced.content.trim()
+        const dateText = /^\\today\s*$/.test(inner) ? 'today' : inner
+        const children = parseInlineLatex(dateText)
+        blocks.push({ type: 'paragraph', children })
+      } else {
+        blocks.push({ type: 'unknown', raw: line })
+      }
       i++
       continue
     }
@@ -751,6 +856,45 @@ function parseLongTableEnv(
   }
 }
 
+/** Parse \begin{table}...\end{table}: find \begin{tabular}...\end{tabular}, parse rows (split by \\ and &), emit TableNode. */
+function parseTableEnv(lines: string[], start: number): { node: TableNode; nextIndex: number } | null {
+  const endTag = '\\end{table}'
+  const blockLines: string[] = []
+  let j = start
+  while (j < lines.length) {
+    blockLines.push(lines[j])
+    if (lines[j].trim().startsWith(endTag)) break
+    j++
+  }
+  if (j >= lines.length) return null
+  const rawBlock = blockLines.join('\n')
+  const tabularInner = extractOneTabular(rawBlock)
+  if (tabularInner === null) return null
+  const skipOnlyRe = /^\s*\\(hline|toprule|midrule|bottomrule)(?:\[[^\]]*\])?\s*$/
+  const rowStrings = splitTableRowsByBackslash(tabularInner)
+  const headerRow: string[] = []
+  const rows: string[][] = []
+  let firstDataRow = true
+  for (const rowStr of rowStrings) {
+    const trimmed = rowStr.trim()
+    if (!trimmed) continue
+    if (skipOnlyRe.test(trimmed)) continue
+    const cells = splitTableRowByAmpersand(trimmed).map((c) => cellContentToMarkdown(c.trim()))
+    if (cells.length === 0) continue
+    if (firstDataRow) {
+      headerRow.length = 0
+      headerRow.push(...cells)
+      firstDataRow = false
+    } else {
+      rows.push(cells)
+    }
+  }
+  return {
+    node: { type: 'table', headerRow: headerRow.length ? headerRow : [''], rows },
+    nextIndex: j + 1
+  }
+}
+
 /** Strip \endfirsthead, \endhead etc. from a table row line so they don't appear in cell text */
 function stripTableRowControl(line: string): string {
   return line
@@ -801,10 +945,12 @@ function normalizeTableCellLatex(t: string): string {
   return s
 }
 
-/** Convert LaTeX cell content to markdown: preserve \( ... \) and $ ... $ as math, strip other commands. */
+/** Convert LaTeX cell content to markdown: preserve \( ... \), $ ... $, $$ ... $$ as math, strip other commands. */
 function cellContentToMarkdown(cell: string): string {
   let t = cell.replace(/\\hline/g, '')
   t = stripTableRowControl(t)
+  // Preserve display math $$ ... $$ first (so single-$ regex does not break it)
+  t = t.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => '$$' + math.replace(/\n+/g, ' ').trim() + '$$')
   // Preserve inline math: \( ... \) → $ ... $
   t = t.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => '$' + math.trim() + '$')
   // Preserve $ ... $ (single $) - already markdown math
@@ -832,11 +978,11 @@ function cellContentToMarkdown(cell: string): string {
   return t.replace(/\s+/g, ' ').trim()
 }
 
-/** Parse one LaTeX table row: split by &, clean cell content; preserve math as $...$ */
+/** Parse one LaTeX table row: split by & (respecting math/braces), clean cell content; preserve math as $...$ */
 function parseTableRowLatex(line: string): string[] {
-  const parts: string[] = []
   let rest = stripTableRowControl(line.replace(/\\\\\s*$/, '').trim())
-  const andSplits = splitByUnescaped(rest, '&')
+  const andSplits = splitTableRowByAmpersand(rest)
+  const parts: string[] = []
   for (const seg of andSplits) {
     const cell = cellContentToMarkdown(seg.trim())
     parts.push(cell)
@@ -854,6 +1000,109 @@ function splitByUnescaped(str: string, char: string): string[] {
     }
   }
   out.push(str.slice(start))
+  return out
+}
+
+/** Split table row by & but not inside $...$, $$...$$, or {...}. */
+function splitTableRowByAmpersand(row: string): string[] {
+  const out: string[] = []
+  let start = 0
+  let depth = 0
+  let inMath1 = false
+  let inMath2 = false
+  let i = 0
+  while (i < row.length) {
+    if (inMath2) {
+      if (row.slice(i).startsWith('$$')) {
+        inMath2 = false
+        i += 2
+      } else i++
+      continue
+    }
+    if (inMath1) {
+      if (row[i] === '$' && (i === 0 || row[i - 1] !== '\\')) {
+        inMath1 = false
+        i++
+      } else i++
+      continue
+    }
+    if (row.slice(i).startsWith('$$')) {
+      inMath2 = true
+      i += 2
+      continue
+    }
+    if (row[i] === '$' && (i === 0 || row[i - 1] !== '\\')) {
+      inMath1 = true
+      i++
+      continue
+    }
+    if (depth === 0 && row[i] === '&' && (i === 0 || row[i - 1] !== '\\')) {
+      out.push(row.slice(start, i).trim())
+      start = i + 1
+    } else if (row[i] === '{') {
+      depth++
+      i++
+      continue
+    } else if (row[i] === '}') {
+      depth--
+      i++
+      continue
+    }
+    i++
+  }
+  out.push(row.slice(start).trim())
+  return out
+}
+
+/** Split tabular inner by row separator \\ but not inside $...$, $$...$$, or {...}. */
+function splitTableRowsByBackslash(inner: string): string[] {
+  const out: string[] = []
+  let start = 0
+  let depth = 0
+  let inMath1 = false
+  let inMath2 = false
+  let i = 0
+  while (i < inner.length) {
+    if (inMath2) {
+      if (inner.slice(i).startsWith('$$')) {
+        inMath2 = false
+        i += 2
+      } else i++
+      continue
+    }
+    if (inMath1) {
+      if (inner[i] === '$' && (i === 0 || inner[i - 1] !== '\\')) {
+        inMath1 = false
+        i++
+      } else i++
+      continue
+    }
+    if (inner.slice(i).startsWith('$$')) {
+      inMath2 = true
+      i += 2
+      continue
+    }
+    if (inner[i] === '$' && (i === 0 || inner[i - 1] !== '\\')) {
+      inMath1 = true
+      i++
+      continue
+    }
+    if (depth === 0 && inner.slice(i).startsWith('\\\\')) {
+      const segment = inner.slice(start, i).trim()
+      if (segment) out.push(segment)
+      start = i + 2
+      i += 2
+      continue
+    }
+    if (inner[i] === '{') {
+      depth++
+    } else if (inner[i] === '}') {
+      depth--
+    }
+    i++
+  }
+  const segment = inner.slice(start).trim()
+  if (segment) out.push(segment)
   return out
 }
 
@@ -994,6 +1243,30 @@ function parseInlineLatex(line: string): InlineNode[] {
     if (incMatch) {
       out.push({ type: 'image', url: incMatch[1] })
       i += incMatch[0].length
+      continue
+    }
+
+    // \\ (line break in LaTeX) → Markdown line break (two spaces + newline)
+    if (line.slice(i).startsWith('\\\\')) {
+      out.push({ type: 'text', value: '  \n' })
+      i += 2
+      continue
+    }
+
+    // \qquad, \quad, \, (horizontal space) → space
+    if (line.slice(i).startsWith('\\qquad')) {
+      out.push({ type: 'text', value: ' ' })
+      i += 6
+      continue
+    }
+    if (line.slice(i).startsWith('\\quad')) {
+      out.push({ type: 'text', value: ' ' })
+      i += 5
+      continue
+    }
+    if (line.slice(i).startsWith('\\,')) {
+      out.push({ type: 'text', value: ' ' })
+      i += 2
       continue
     }
 

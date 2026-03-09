@@ -100,6 +100,17 @@ describe('LaTeX → Markdown', () => {
     expect(latexToMarkdown('\\hrulefill')).toContain('---')
   })
 
+  it('\\title{...} \\author{...} \\date{\\today} → heading + paragraphs', () => {
+    const latex = `\\title{C# 语言全面解析：从入门到精通}
+\\author{科技博客}
+\\date{\\today}`
+    const md = latexToMarkdown(latex)
+    expect(md).toContain('# C# 语言全面解析：从入门到精通')
+    expect(md).toContain('科技博客')
+    expect(md).toContain('today')
+    expect(md).not.toMatch(/\\\\title|\\\\author|\\\\date/)
+  })
+
   it('strips \\begin{document} body only', () => {
     const full = '\\documentclass{article}\n\\begin{document}\n\\section{Hi}\n\\end{document}'
     const ast = latexToAST(full)
@@ -115,5 +126,51 @@ describe('LaTeX → Markdown', () => {
 
   it('empty input → empty string', () => {
     expect(latexToMarkdown('')).toBe('')
+  })
+
+  it('\\begin{table} with tabular → markdown table', () => {
+    const latex = `\\begin{table}[H]
+\\centering
+\\caption{Notations}
+\\begin{tabular}{c l c}
+\\toprule[2pt]
+\\multicolumn{1}{m{3cm}}{\\centering Symbol} & \\multicolumn{1}{l}{\\centering Unit} \\\\
+\\midrule
+$x$ & Sample matrix & - \\\\
+$R$ & Sample correlation & -
+\\end{tabular}
+\\end{table}`
+    const md = latexToMarkdown(latex)
+    expect(md).toContain('|')
+    expect(md).toContain('Symbol')
+    expect(md).toContain('Sample matrix')
+    expect(md).toContain('$x$')
+    expect(md).not.toMatch(/\\\\begin\{table\}/)
+  })
+
+  it('\\\\ and \\qquad → line break and space', () => {
+    const latex = 'Task 1\\\\\n\\qquad We use the method.'
+    const md = latexToMarkdown(latex)
+    expect(md).toContain('Task 1')
+    expect(md).toContain('We use the method')
+    expect(md).not.toMatch(/\\\\\\\\|\\\\qquad/)
+  })
+
+  it('\\begin{appendices} → ## Appendices + content', () => {
+    const latex = `\\begin{appendices}
+\\textbf{Code}
+\\end{appendices}`
+    const md = latexToMarkdown(latex)
+    expect(md).toContain('## Appendices')
+    expect(md).toContain('Code')
+    expect(md).not.toMatch(/\\\\begin\{appendices\}/)
+  })
+
+  it('multi-line inline math in paragraph', () => {
+    const latex = 'rate $\\frac{\\lambda_i}{x}$ and more'
+    const md = latexToMarkdown(latex)
+    expect(md).toContain('rate')
+    expect(md).toContain('and more')
+    expect(md).toMatch(/\$.*\\frac.*\$/);
   })
 })
