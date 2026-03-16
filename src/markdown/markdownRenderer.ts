@@ -102,8 +102,7 @@ function renderInline(node: InlineNode, options?: LatexToMarkdownOptions): strin
   if (isStrongNode(node)) {
     const inner = renderInlineSequence(node.children, options)
     const result = handlers['textbf']?.({ raw: `\\textbf{${inner}}`, name: 'textbf', hasStar: false, arg: inner })
-    if (result != null) return renderInlineHandlerResult(result, options)
-    return `**${inner}**`
+    return (result != null ? renderInlineHandlerResult(result, options) : null) ?? `**${inner}**`
   }
 
   if (isEmphasisNode(node)) {
@@ -111,14 +110,12 @@ function renderInline(node: InlineNode, options?: LatexToMarkdownOptions): strin
     const result =
       handlers['emph']?.({ raw: `\\emph{${inner}}`, name: 'emph', hasStar: false, arg: inner }) ??
       handlers['textit']?.({ raw: `\\textit{${inner}}`, name: 'textit', hasStar: false, arg: inner })
-    if (result != null) return renderInlineHandlerResult(result, options)
-    return `*${inner}*`
+    return (result != null ? renderInlineHandlerResult(result, options) : null) ?? `*${inner}*`
   }
 
   if (isInlineCodeNode(node)) {
     const result = handlers['texttt']?.({ raw: `\\texttt{${node.value}}`, name: 'texttt', hasStar: false, arg: node.value })
-    if (result != null) return renderInlineHandlerResult(result, options)
-    return `\`${node.value}\``
+    return (result != null ? renderInlineHandlerResult(result, options) : null) ?? `\`${node.value}\``
   }
 
   if (isLinkNode(node)) {
@@ -130,8 +127,7 @@ function renderInline(node: InlineNode, options?: LatexToMarkdownOptions): strin
       arg: node.url,
       arg2: inner
     })
-    if (result != null) return renderInlineHandlerResult(result, options)
-    return `[${inner}](${node.url})`
+    return (result != null ? renderInlineHandlerResult(result, options) : null) ?? `[${inner}](${node.url})`
   }
 
   if (isImageNode(node)) {
@@ -142,8 +138,7 @@ function renderInline(node: InlineNode, options?: LatexToMarkdownOptions): strin
       optionalArg: node.alt,
       arg: node.url
     })
-    if (result != null) return renderInlineHandlerResult(result, options)
-    return `![${node.alt || ''}](${node.url})`
+    return (result != null ? renderInlineHandlerResult(result, options) : null) ?? `![${node.alt || ''}](${node.url})`
   }
 
   if (isMathInlineNode(node)) return `$${node.content}$`
@@ -151,8 +146,7 @@ function renderInline(node: InlineNode, options?: LatexToMarkdownOptions): strin
   if (isStrikethroughNode(node)) {
     const inner = renderInlineSequence(node.children, options)
     const result = handlers['sout']?.({ raw: `\\sout{${inner}}`, name: 'sout', hasStar: false, arg: inner })
-    if (result != null) return renderInlineHandlerResult(result, options)
-    return `~~${inner}~~`
+    return (result != null ? renderInlineHandlerResult(result, options) : null) ?? `~~${inner}~~`
   }
 
   if (node.type === 'unknown_inline') {
