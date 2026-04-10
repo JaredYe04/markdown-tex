@@ -105,10 +105,28 @@ function renderBlock(node: BlockNode): string {
     return '\\hrulefill'
   }
   if (isTableNode(node)) {
-    const header = '| ' + node.headerRow.join(' | ') + ' |'
-    const sep = '| ' + node.headerRow.map(() => '---').join(' | ') + ' |'
-    const body = node.rows.map((row) => '| ' + row.join(' | ') + ' |').join('\n')
-    return [header, sep, body].filter(Boolean).join('\n')
+    const colCount = Math.max(
+      node.headerRow.length,
+      ...node.rows.map((r) => r.length),
+      1
+    )
+    const spec = Array.from({ length: colCount }, () => 'l').join(' ')
+
+    const normalizeRow = (row: string[]): string[] => {
+      const out = row.slice(0, colCount)
+      while (out.length < colCount) out.push('')
+      return out
+    }
+
+    const renderRow = (row: string[]): string =>
+      normalizeRow(row)
+        .map((cell) => escapeLatex(cell))
+        .join(' & ') + ' \\\\'
+
+    const headerLine = renderRow(node.headerRow)
+    const bodyLines = node.rows.map(renderRow).join('\n')
+
+    return `\\begin{tabular}{${spec}}\n\\hline\n${headerLine}\n\\hline\n${bodyLines}\n\\hline\n\\end{tabular}`
   }
   if (isUnknownBlockNode(node)) {
     return node.raw

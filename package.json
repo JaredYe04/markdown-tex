@@ -18,7 +18,8 @@
     "build": "tsc",
     "test": "vitest run",
     "lint": "eslint src tests --ext .ts",
-    "convert-tex": "npm run build && node scripts/convert-tex-to-md.cjs"
+    "convert-tex": "npm run build && node scripts/convert-tex-to-md.cjs",
+    "convert-md": "npm run build && node scripts/convert-md-to-tex.cjs"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

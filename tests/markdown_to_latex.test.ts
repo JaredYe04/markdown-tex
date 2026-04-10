@@ -93,6 +93,11 @@ describe('Markdown → LaTeX', () => {
     expect(out).toContain('\\item item2')
   })
 
+  it('GFM table → tabular', () => {
+    const { markdown, latex } = loadFixture('gfm_table')
+    expect(markdownToLatex(markdown)).toBe(latex)
+  })
+
   it('ordered list → enumerate', () => {
     const md = '1. first\n2. second'
     const out = markdownToLatex(md)
